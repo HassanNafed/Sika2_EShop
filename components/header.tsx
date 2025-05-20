@@ -48,7 +48,7 @@ import {
   Phone,
   Info,
 } from "lucide-react"
-import { getBrowserClient } from "@/lib/supabase"
+import { getBrowserClient } from "@/lib/supabase-browser"
 import { useAuth } from "@/contexts/auth-context"
 import { useCart } from "@/contexts/cart-context"
 

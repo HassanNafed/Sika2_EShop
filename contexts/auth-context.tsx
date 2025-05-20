@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { createContext, useContext, useEffect, useState } from "react"
-import { getBrowserClient } from "@/lib/supabase"
+import { getBrowserClient } from "@/lib/supabase-browser"
 import type { Session, User } from "@supabase/supabase-js"
 import { useRouter } from "next/navigation"
 
