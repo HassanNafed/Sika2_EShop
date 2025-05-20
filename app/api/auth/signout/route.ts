@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server"
-import { getServerClient } from "@/lib/supabase"
+import { getServerClientWithCookies } from "@/lib/supabase-server-cookies"
 
 export async function POST() {
-  const supabase = getServerClient()
+  const supabase = getServerClientWithCookies()
 
   await supabase.auth.signOut()
 

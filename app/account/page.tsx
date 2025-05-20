@@ -10,25 +10,34 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
+import { getBrowserClient } from "@/lib/supabase"
 
 export default function AccountPage() {
-  const { user, isLoading } = useAuth()
+  const { user, isLoading: authLoading } = useAuth()
   const router = useRouter()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
   const [isUpdating, setIsUpdating] = useState(false)
+  const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push("/auth/login")
-    } else if (user) {
+    setIsClient(true)
+
+    // Redirect to login if not authenticated
+    if (!authLoading && !user) {
+      router.push("/auth/login?redirect=/account")
+    }
+  }, [user, authLoading, router])
+
+  useEffect(() => {
+    if (user) {
       // Set initial values
       setEmail(user.email || "")
 
       // Fetch user profile data
       const fetchUserProfile = async () => {
-        const supabase = (await import("@/lib/supabase")).getBrowserClient()
+        const supabase = getBrowserClient()
         const { data } = await supabase.from("users").select("name, phone").eq("id", user.id).single()
 
         if (data) {
@@ -39,19 +48,21 @@ export default function AccountPage() {
 
       fetchUserProfile()
     }
-  }, [user, isLoading, router])
+  }, [user])
 
   const handleUpdateProfile = async () => {
+    if (!user) return
+
     setIsUpdating(true)
     try {
-      const supabase = (await import("@/lib/supabase")).getBrowserClient()
+      const supabase = getBrowserClient()
       const { error } = await supabase
         .from("users")
         .update({
           name,
           phone,
         })
-        .eq("id", user?.id)
+        .eq("id", user.id)
 
       if (error) throw error
 
@@ -71,12 +82,16 @@ export default function AccountPage() {
     }
   }
 
-  if (isLoading) {
+  if (authLoading || !isClient) {
     return (
       <div className="container mx-auto px-4 py-12 flex justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-red-600" />
       </div>
     )
+  }
+
+  if (!user) {
+    return null // Will redirect in useEffect
   }
 
   return (

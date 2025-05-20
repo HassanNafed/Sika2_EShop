@@ -1,16 +1,31 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ShoppingCart, Trash2, Heart } from "lucide-react"
+import { ShoppingCart, Trash2, Heart, Loader2 } from "lucide-react"
 import { useWishlist } from "@/contexts/wishlist-context"
 import { useCart } from "@/contexts/cart-context"
+import { useAuth } from "@/contexts/auth-context"
 import { toast } from "@/components/ui/use-toast"
+import { useRouter } from "next/navigation"
 
 export default function WishlistPage() {
-  const { items, removeItem } = useWishlist()
+  const { items, removeItem, isLoading: wishlistLoading } = useWishlist()
   const { addItem } = useCart()
+  const { user, isLoading: authLoading } = useAuth()
+  const router = useRouter()
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+
+    // Redirect to login if not authenticated
+    if (!authLoading && !user) {
+      router.push("/auth/login?redirect=/account/wishlist")
+    }
+  }, [user, authLoading, router])
 
   const handleAddToCart = async (item: any) => {
     try {
@@ -39,11 +54,27 @@ export default function WishlistPage() {
     }
   }
 
+  if (authLoading || !isClient) {
+    return (
+      <div className="container mx-auto px-4 py-12 flex justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-red-600" />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return null // Will redirect in useEffect
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">My Wishlist</h1>
 
-      {items.length > 0 ? (
+      {wishlistLoading ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-red-600" />
+        </div>
+      ) : items.length > 0 ? (
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -53,7 +84,7 @@ export default function WishlistPage() {
                     <Link href={`/products/${item.slug}`}>
                       <div className="aspect-square overflow-hidden">
                         <Image
-                          src={item.image_url || "/placeholder.svg"}
+                          src={item.image_url || "/placeholder.svg?height=200&width=200"}
                           alt={item.name}
                           width={200}
                           height={200}
