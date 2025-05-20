@@ -3,8 +3,64 @@ import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ShoppingCart, ArrowRight, Shield, Truck, HeartHandshake, Award, CheckCircle, ChevronRight } from "lucide-react"
+import { createServerClient } from "@/lib/supabase"
 
-export default function HomePage() {
+// Function to fetch categories from the database
+async function getCategories() {
+  const supabase = createServerClient()
+  const { data, error } = await supabase.from("categories").select("*").order("name").limit(6)
+
+  if (error) {
+    console.error("Error fetching categories:", error)
+    return []
+  }
+
+  return data
+}
+
+// Function to fetch featured products from the database
+async function getFeaturedProducts() {
+  const supabase = createServerClient()
+  const { data, error } = await supabase
+    .from("products")
+    .select(`
+      *,
+      categories (
+        name,
+        slug
+      )
+    `)
+    .eq("is_featured", true)
+    .order("id", { ascending: false })
+    .limit(4)
+
+  if (error) {
+    console.error("Error fetching featured products:", error)
+    return []
+  }
+
+  return data
+}
+
+// Function to fetch distributors from the database
+async function getDistributors() {
+  const supabase = createServerClient()
+  const { data, error } = await supabase.from("distributors").select("*").eq("is_verified", true).order("name").limit(3)
+
+  if (error) {
+    console.error("Error fetching distributors:", error)
+    return []
+  }
+
+  return data
+}
+
+export default async function HomePage() {
+  // Fetch data from the database
+  const categories = await getCategories()
+  const featuredProducts = await getFeaturedProducts()
+  const distributors = await getDistributors()
+
   return (
     <div>
       {/* Hero Section */}
@@ -56,42 +112,45 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            <CategoryCard
-              title="Waterproofing"
-              image="/placeholder.svg?height=300&width=400&text=Waterproofing"
-              description="Solutions for protecting structures against water ingress and damage."
-              link="/products/waterproofing"
-            />
-            <CategoryCard
-              title="Concrete Repair"
-              image="/placeholder.svg?height=300&width=400&text=Concrete+Repair"
-              description="Products for restoring and strengthening damaged concrete structures."
-              link="/products/concrete-repair"
-            />
-            <CategoryCard
-              title="Flooring"
-              image="/placeholder.svg?height=300&width=400&text=Flooring"
-              description="High-performance flooring systems for industrial and commercial applications."
-              link="/products/flooring"
-            />
-            <CategoryCard
-              title="Sealants & Adhesives"
-              image="/placeholder.svg?height=300&width=400&text=Sealants"
-              description="Flexible joint sealants and strong adhesives for various construction needs."
-              link="/products/sealants"
-            />
-            <CategoryCard
-              title="Roofing"
-              image="/placeholder.svg?height=300&width=400&text=Roofing"
-              description="Durable and weather-resistant solutions for all types of roofs."
-              link="/products/roofing"
-            />
-            <CategoryCard
-              title="Grouts & Anchors"
-              image="/placeholder.svg?height=300&width=400&text=Grouts"
-              description="Precision grouts and anchoring systems for structural stability."
-              link="/products/grouts"
-            />
+            {categories.length > 0 ? (
+              categories.map((category) => (
+                <CategoryCard
+                  key={category.id}
+                  title={category.name}
+                  image={
+                    category.image_url ||
+                    `/placeholder.svg?height=300&width=400&text=${encodeURIComponent(category.name)}`
+                  }
+                  description={
+                    category.description ||
+                    `High-quality ${category.name.toLowerCase()} products for your construction needs.`
+                  }
+                  link={`/products?category=${category.slug}`}
+                />
+              ))
+            ) : (
+              // Fallback if no categories are found
+              <>
+                <CategoryCard
+                  title="Waterproofing"
+                  image="/placeholder.svg?height=300&width=400&text=Waterproofing"
+                  description="Solutions for protecting structures against water ingress and damage."
+                  link="/products?category=waterproofing"
+                />
+                <CategoryCard
+                  title="Concrete Repair"
+                  image="/placeholder.svg?height=300&width=400&text=Concrete+Repair"
+                  description="Products for restoring and strengthening damaged concrete structures."
+                  link="/products?category=concrete-repair"
+                />
+                <CategoryCard
+                  title="Flooring"
+                  image="/placeholder.svg?height=300&width=400&text=Flooring"
+                  description="High-performance flooring systems for industrial and commercial applications."
+                  link="/products?category=flooring"
+                />
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -108,34 +167,58 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <ProductCard
-              title="SikaTop Seal-107"
-              image="/placeholder.svg?height=300&width=300&text=SikaTop+Seal-107"
-              price="EGP 230"
-              category="Waterproofing"
-              isBestseller={true}
-            />
-            <ProductCard
-              title="Sika MonoTop-610"
-              image="/placeholder.svg?height=300&width=300&text=Sika+MonoTop-610"
-              price="EGP 250"
-              category="Concrete Repair"
-              isBestseller={true}
-            />
-            <ProductCard
-              title="SikaFloor Level"
-              image="/placeholder.svg?height=300&width=300&text=SikaFloor+Level"
-              price="EGP 230"
-              category="Flooring"
-              isBestseller={true}
-            />
-            <ProductCard
-              title="Sikaflex-11 FC+"
-              image="/placeholder.svg?height=300&width=300&text=Sikaflex-11+FC+"
-              price="EGP 500"
-              category="Sealants"
-              isBestseller={false}
-            />
+            {featuredProducts.length > 0 ? (
+              featuredProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  title={product.name}
+                  image={
+                    product.image_url ||
+                    `/placeholder.svg?height=300&width=300&text=${encodeURIComponent(product.name)}`
+                  }
+                  price={`EGP ${product.price}`}
+                  category={product.categories?.name || "Uncategorized"}
+                  isBestseller={product.is_bestseller || false}
+                  slug={product.slug}
+                />
+              ))
+            ) : (
+              // Fallback if no featured products are found
+              <>
+                <ProductCard
+                  title="SikaTop Seal-107"
+                  image="/placeholder.svg?height=300&width=300&text=SikaTop+Seal-107"
+                  price="EGP 230"
+                  category="Waterproofing"
+                  isBestseller={true}
+                  slug="sikatop-seal-107"
+                />
+                <ProductCard
+                  title="Sika MonoTop-610"
+                  image="/placeholder.svg?height=300&width=300&text=Sika+MonoTop-610"
+                  price="EGP 250"
+                  category="Concrete Repair"
+                  isBestseller={true}
+                  slug="sika-monotop-610"
+                />
+                <ProductCard
+                  title="SikaFloor Level"
+                  image="/placeholder.svg?height=300&width=300&text=SikaFloor+Level"
+                  price="EGP 230"
+                  category="Flooring"
+                  isBestseller={true}
+                  slug="sikafloor-level"
+                />
+                <ProductCard
+                  title="Sikaflex-11 FC+"
+                  image="/placeholder.svg?height=300&width=300&text=Sikaflex-11+FC+"
+                  price="EGP 500"
+                  category="Sealants"
+                  isBestseller={false}
+                  slug="sikaflex-11-fc-plus"
+                />
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -176,37 +259,43 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Projects Showcase */}
+      {/* Distributors */}
       <section className="py-16 bg-gray-900 text-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Our Projects</h2>
+            <h2 className="text-3xl font-bold mb-4">Our Distributors</h2>
             <p className="text-gray-400 max-w-2xl mx-auto">
-              Discover how our products have been used in major construction projects across Egypt and the Middle East.
+              Find our products at these trusted distributors across Egypt.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <ProjectCard
-              title="Cairo Tower Renovation"
-              image="/placeholder.svg?height=400&width=600&text=Cairo+Tower"
-              category="Concrete Repair"
-            />
-            <ProjectCard
-              title="Alexandria Waterfront"
-              image="/placeholder.svg?height=400&width=600&text=Alexandria+Waterfront"
-              category="Waterproofing"
-            />
-            <ProjectCard
-              title="Luxor Commercial Center"
-              image="/placeholder.svg?height=400&width=600&text=Luxor+Center"
-              category="Flooring"
-            />
+            {distributors.length > 0 ? (
+              distributors.map((distributor) => (
+                <DistributorCard
+                  key={distributor.id}
+                  name={distributor.name}
+                  location={`${distributor.city}, ${distributor.country}`}
+                  contact={distributor.phone}
+                />
+              ))
+            ) : (
+              // Fallback if no distributors are found
+              <>
+                <DistributorCard name="Cairo Building Materials" location="Cairo, Egypt" contact="+20 2 1234 5678" />
+                <DistributorCard
+                  name="Alexandria Construction Supplies"
+                  location="Alexandria, Egypt"
+                  contact="+20 3 9876 5432"
+                />
+                <DistributorCard name="Delta Hardware & Tools" location="Mansoura, Egypt" contact="+20 4 5555 7777" />
+              </>
+            )}
           </div>
 
           <div className="text-center mt-8">
             <Button variant="outline" className="border-white text-white hover:bg-white hover:text-gray-900">
-              View All Projects
+              <Link href="/distributors">View All Distributors</Link>
             </Button>
           </div>
         </div>
@@ -310,12 +399,14 @@ function ProductCard({
   price,
   category,
   isBestseller,
+  slug,
 }: {
   title: string
   image: string
   price: string
   category: string
   isBestseller: boolean
+  slug: string
 }) {
   return (
     <div className="bg-white rounded-lg overflow-hidden shadow-md transition-transform hover:shadow-lg hover:-translate-y-1">
@@ -325,21 +416,25 @@ function ProductCard({
             Bestseller
           </div>
         )}
-        <div className="aspect-square overflow-hidden">
-          <Image
-            src={image || "/placeholder.svg"}
-            alt={title}
-            width={300}
-            height={300}
-            className="object-contain w-full h-full"
-          />
-        </div>
+        <Link href={`/products/${slug}`}>
+          <div className="aspect-square overflow-hidden">
+            <Image
+              src={image || "/placeholder.svg"}
+              alt={title}
+              width={300}
+              height={300}
+              className="object-contain w-full h-full"
+            />
+          </div>
+        </Link>
       </div>
       <div className="p-4">
         <div className="mb-2">
           <span className="text-xs text-gray-500">{category}</span>
         </div>
-        <h3 className="font-bold text-lg mb-1">{title}</h3>
+        <Link href={`/products/${slug}`}>
+          <h3 className="font-bold text-lg mb-1 hover:text-red-600">{title}</h3>
+        </Link>
         <p className="text-gray-700 mb-4">{price}</p>
         <Button className="w-full bg-red-600 hover:bg-red-700 text-white">
           <ShoppingCart className="h-4 w-4 mr-2" />
@@ -368,23 +463,23 @@ function FeatureCard({
   )
 }
 
-function ProjectCard({ title, image, category }: { title: string; image: string; category: string }) {
+function DistributorCard({
+  name,
+  location,
+  contact,
+}: {
+  name: string
+  location: string
+  contact: string
+}) {
   return (
-    <div className="relative group overflow-hidden rounded-lg">
-      <div className="aspect-video overflow-hidden">
-        <Image
-          src={image || "/placeholder.svg"}
-          alt={title}
-          width={600}
-          height={400}
-          className="object-cover w-full h-full transition-transform group-hover:scale-110"
-        />
-      </div>
-      <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-70"></div>
-      <div className="absolute bottom-0 left-0 p-6">
-        <span className="text-sm text-gray-300 mb-2 block">{category}</span>
-        <h3 className="font-bold text-xl text-white">{title}</h3>
-      </div>
+    <div className="bg-gray-800 p-6 rounded-lg">
+      <h3 className="font-bold text-xl mb-2">{name}</h3>
+      <p className="text-gray-400 mb-4">{location}</p>
+      <p className="text-gray-300">{contact}</p>
+      <Button variant="outline" className="mt-4 border-gray-600 text-gray-300 hover:bg-gray-700">
+        Get Directions
+      </Button>
     </div>
   )
 }

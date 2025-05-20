@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2 } from "lucide-react"
 import { getBrowserClient } from "@/lib/supabase"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -16,6 +17,7 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { signIn } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -23,22 +25,18 @@ export default function AdminLoginPage() {
     setError(null)
 
     try {
-      const supabase = getBrowserClient()
+      const { error: signInError } = await signIn(email, password)
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-
-      if (error) {
-        throw error
+      if (signInError) {
+        throw signInError
       }
 
       // Check if user is admin
+      const supabase = getBrowserClient()
       const { data: userData, error: userError } = await supabase
         .from("users")
         .select("role")
-        .eq("id", data.user.id)
+        .eq("email", email)
         .single()
 
       if (userError || !userData || userData.role !== "admin") {
